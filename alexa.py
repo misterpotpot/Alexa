@@ -2,60 +2,72 @@
 
 import urllib2
 
-def querry(nom_domaine):
-	url = "http://www.alexa.com/siteinfo/" + nom_domaine
+def load(file):
+	fichier = open(file, "r")
+	contenu = fichier.read()
+	fichier.close()
+	output = contenu.split("\n")
+	print "Fichier chargé\n"
+	return output
+
+def is_ecommerce(body):
+	if body.find("panier", 0) > 1:
+		return 'oui'
+	return 'non'
+
+def querry(url, url2, to_find, debut, fin, ecommerce):
 	try:
 		req = urllib2.urlopen(url)
 		body = req.read()
-		position_debut = body.find("""strong class="metrics-data align-vmiddle">""", 0) + 134
-		position_fin = position_debut + 10
-		output = body[position_debut:position_fin]
-		if output == "<span styl":
-			output = "NA"
-		output = output.replace(',','') 
-		output = output.replace(' ','')
 	except:
-		output = '#Erreur'
+		try:
+			req = urllib2.urlopen(url2)
+			body = req.read()
+		except:
+			return '#Erreur=400'
+	try:
+		position_debut = body.find(to_find, 0) + debut
+		position_fin = position_debut + fin
+		output = body[position_debut:position_fin]
+		output = output.replace('\n','#')
+	except:
+		output = '#Erreur=Unfound'
+	if ecommerce == 1:
+		output = output + ' ' + is_ecommerce(body)
 	return output
-
-def querry_pays(nom_domaine):
-    url = "http://www.alexa.com/siteinfo/" + nom_domaine
-    try:
-        req = urllib2.urlopen(url)
-        body = req.read()
-        position_debut = body.find("""<a href='/topsites/countries/""", 0) + 29
-        position_fin = position_debut + 2
-        output = body[position_debut:position_fin]
-    except:
-        output = '#Erreur'
-    return output
-
 
 
 while 1:
 	print "\n\n************************"
 	print "* Crawling - Alexa *"
 	print "************************"
-	print "\nChoisissez un mode :\n'ranking'\n'pays'\n'quit'       => Quitter le programme"
+	print "\nChoisissez un mode :\n'ranking'\n'pays'\n'direct'\n'quit'       => Quitter le programme"
 	mode = raw_input()
 
 	if mode == "ranking":
-		fichier = open("input.txt", "r")
-		contenu = fichier.read()
-		fichier.close()
-		nom_domaine = contenu.split("\n")
+		nom_domaine = load("input.txt")
 		for i in nom_domaine:
-			output = querry(i)
+			url = "http://www.alexa.com/siteinfo/" + i
+			output = querry(url, url, """strong class="metrics-data align-vmiddle">""", 134, 10, 0)
+			if output == "<span styl":
+				output = "NA"
+			output = output.replace(',','') 
+			output = output.replace(' ','')
 			print i + " " + output
                 
 	elif mode == "pays":
-		fichier = open("input.txt", "r")
-		contenu = fichier.read()
-		fichier.close()
-		nom_domaine = contenu.split("\n")
-		print "Fichier chargé\n"
+		nom_domaine = load("input.txt")
 		for i in nom_domaine:
-			output = querry_pays(i)
+			url = "http://www.alexa.com/siteinfo/" + i
+			output = querry(url, url, """<a href='/topsites/countries/""", 29, 2, 0)
+			print i + " " + output
+
+	elif mode == "direct":
+		nom_domaine = load("input.txt")
+		for i in nom_domaine:
+			url = "http://" + i
+			url2 = "http://www." + i
+			output = querry(url, url2, "lang=", 6, 2, 1)
 			print i + " " + output
 
 	elif mode == "quit":
